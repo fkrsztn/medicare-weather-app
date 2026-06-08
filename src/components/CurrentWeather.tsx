@@ -2,13 +2,15 @@ import type { CurrentWeather as CurrentWeatherType } from "@/types/weather";
 
 type CurrentWeatherProps = {
   weather: CurrentWeatherType;
+  onCityClick: () => void;
 };
 
-export function CurrentWeather({ weather }: CurrentWeatherProps) {
+export function CurrentWeather({ weather, onCityClick }: CurrentWeatherProps) {
   return (
     <section className="flex flex-col items-start">
       <button
         type="button"
+        onClick={onCityClick}
         className="pl-[5px] text-left text-[18px] font-light leading-none tracking-[-0.04em] text-white/85 transition-opacity hover:opacity-80 lg:text-[18px]"
       >
         {weather.city}
