@@ -5,6 +5,12 @@ Az alkalmazás egy reszponzív időjárás-előrejelző felület, amely Figma de
 
 A felhasználó egy városkereső modal segítségével választhat várost. A keresés az Open-Meteo Geocoding API-ra épül, a kiválasztott város koordinátái alapján pedig az Open-Meteo Forecast API szolgáltatja az aktuális időjárási adatokat és a 7 napos előrejelzést.
 
+## Demo
+
+Az alkalmazás Vercelen is elérhető:
+
+https://medicare-weather-app-flame.vercel.app/
+
 ## Funkciók
 
 - Városkeresés modal ablakban
