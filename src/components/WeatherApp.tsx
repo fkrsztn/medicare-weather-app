@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { CitySearchModal } from "@/components/CitySearchModal";
 import { CurrentWeather } from "@/components/CurrentWeather";
 import { ForecastList } from "@/components/ForecastList";
@@ -28,6 +28,8 @@ export function WeatherApp() {
   const [isWeatherLoading, setIsWeatherLoading] = useState(false);
   const [weatherError, setWeatherError] = useState<string | null>(null);
 
+  const citySearchRequestIdRef = useRef(0);
+
   const hasWeatherData = currentWeather !== null && forecastDays.length > 0;
   const isCitySelectionRequired = hasInitialized && !currentWeather;
 
@@ -44,10 +46,14 @@ export function WeatherApp() {
 
       setCurrentWeather(weatherData.currentWeather);
       setForecastDays(weatherData.forecastDays);
+
+      return true;
     } catch {
       setCurrentWeather(null);
       setForecastDays([]);
       setWeatherError("Nem sikerült lekérni az időjárási adatokat.");
+
+      return false;
     } finally {
       setIsWeatherLoading(false);
     }
@@ -68,6 +74,7 @@ export function WeatherApp() {
 
   const handleSearchCity = useCallback(async (query: string) => {
     const normalizedQuery = query.trim();
+    const requestId = ++citySearchRequestIdRef.current;
 
     if (!normalizedQuery) {
       setCityResults([]);
@@ -82,29 +89,42 @@ export function WeatherApp() {
 
       const cities = await searchCities(normalizedQuery);
 
+      if (requestId !== citySearchRequestIdRef.current) {
+        return;
+      }
+
       setCityResults(cities);
     } catch {
+      if (requestId !== citySearchRequestIdRef.current) {
+        return;
+      }
+
       setCityResults([]);
       setCitySearchError("Nem sikerült lekérni a városokat.");
     } finally {
-      setIsCitySearchLoading(false);
+      if (requestId === citySearchRequestIdRef.current) {
+        setIsCitySearchLoading(false);
+      }
     }
   }, []);
 
-  function handleSelectCity(city: City) {
-    storeCity(city);
+  async function handleSelectCity(city: City) {
     setIsCitySearchOpen(false);
     setCityResults([]);
     setCitySearchError(null);
     setWeatherError(null);
 
-    void loadWeatherForCity(city);
+    const wasWeatherLoaded = await loadWeatherForCity(city);
+
+    if (wasWeatherLoaded) {
+      storeCity(city);
+    }
   }
 
   return (
     <>
       <main className="min-h-screen px-[37px] pt-[52px] pb-[10px] text-white sm:px-12 lg:px-8 lg:pt-[96px] lg:pb-[20px]">
-        <div className="mx-auto flex min-h-[calc(100vh-62px)] w-full max-w-[942px] flex-col lg:min-h-[calc(100vh-116px)]">
+        <div className="mx-auto flex min-h-full w-full max-w-[860px] flex-col lg:min-h-[calc(100vh-116px)]">
           {!hasInitialized ? (
             <div className="flex flex-1 items-center justify-center">
               <p className="text-[18px] font-light tracking-[-0.04em] text-white/80">
@@ -133,7 +153,7 @@ export function WeatherApp() {
             </div>
           ) : hasWeatherData ? (
             <>
-              <div className="grid items-start lg:grid-cols-[210px_660px] lg:gap-x-[72px]">
+              <div className="grid items-start lg:grid-cols-[210px_578px] lg:gap-x-[72px]">
                 <CurrentWeather
                   weather={currentWeather}
                   onCityClick={openCitySearch}
@@ -180,8 +200,8 @@ export function WeatherApp() {
             </div>
           )}
 
-          <footer className="mt-auto pt-10 text-center text-[16px] font-light tracking-[-0.04em] text-white/80 lg:pt-6 lg:text-left">
-            Krisztián
+          <footer className="mt-auto pb-5 pt-6 text-center text-[16px] font-light tracking-[-0.04em] text-white/80 lg:pb-0 lg:pt-6 lg:text-left">
+            Farkas Krisztián
           </footer>
         </div>
       </main>

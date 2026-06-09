@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Search, X } from "lucide-react";
 import type { City } from "@/types/weather";
@@ -30,16 +30,18 @@ export function CitySearchModal({
   const inputRef = useRef<HTMLInputElement | null>(null);
   const searchTimeoutRef = useRef<number | null>(null);
 
-  function handleClose() {
+  const handleClose = useCallback(() => {
     if (isRequired) {
-        return;
+      return;
     }
 
     onClose();
-}
+  }, [isRequired, onClose]);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      return;
+    }
 
     const timeoutId = window.setTimeout(() => {
       inputRef.current?.focus();
@@ -57,58 +59,59 @@ export function CitySearchModal({
       window.clearTimeout(timeoutId);
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isOpen, isRequired, onClose]);
+  }, [isOpen, handleClose]);
 
-function handleSearchValueChange(value: string) {
-  setSearchValue(value);
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        window.clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
 
-  if (searchTimeoutRef.current) {
-    window.clearTimeout(searchTimeoutRef.current);
-  }
+  function handleSearchValueChange(value: string) {
+    setSearchValue(value);
 
-  searchTimeoutRef.current = window.setTimeout(() => {
-    onSearchCity(value);
-  }, 350);
-}
-
-  function handleSelectCity(city: City) {
-  if (searchTimeoutRef.current) {
-    window.clearTimeout(searchTimeoutRef.current);
-  }
-
-  onSelectCity(city);
-  setSearchValue("");
-}
-useEffect(() => {
-  return () => {
     if (searchTimeoutRef.current) {
       window.clearTimeout(searchTimeoutRef.current);
     }
-  };
-}, []);
 
-return (
-  <AnimatePresence initial={false}>
-  {isOpen && (
-    <motion.div
-      className="fixed left-0 top-0 z-[99999] flex h-[100dvh] w-screen items-center justify-center bg-black/40 px-5 backdrop-blur-sm"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.18, ease: "easeOut" }}
-      onMouseDown={handleClose}
-    >
-      <motion.div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="city-search-title"
-        className="relative z-[100000] w-full max-w-[460px] rounded-[28px] border border-white/50 bg-white/15 p-6 text-white shadow-2xl backdrop-blur-xl"
-        initial={{ opacity: 0, y: 18, scale: 0.96 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: 12, scale: 0.97 }}
-        transition={{ duration: 0.22, ease: "easeOut" }}
-        onMouseDown={(event) => event.stopPropagation()}
-      >
+    searchTimeoutRef.current = window.setTimeout(() => {
+      onSearchCity(value);
+    }, 350);
+  }
+
+  function handleSelectCity(city: City) {
+    if (searchTimeoutRef.current) {
+      window.clearTimeout(searchTimeoutRef.current);
+    }
+
+    onSelectCity(city);
+    setSearchValue("");
+  }
+
+  return (
+    <AnimatePresence initial={false}>
+      {isOpen && (
+        <motion.div
+          className="fixed left-0 top-0 z-[99999] flex h-[100dvh] w-screen items-center justify-center bg-black/40 px-5 backdrop-blur-sm"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18, ease: "easeOut" }}
+          onMouseDown={handleClose}
+        >
+          <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="city-search-title"
+            className="relative z-[100000] w-full max-w-[460px] rounded-[28px] border border-white/50 bg-white/15 p-6 text-white shadow-2xl backdrop-blur-xl"
+            initial={{ opacity: 0, y: 18, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 12, scale: 0.97 }}
+            transition={{ duration: 0.22, ease: "easeOut" }}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
             <div className="mb-6 flex items-start justify-between gap-4">
               <div>
                 <h2
@@ -125,14 +128,14 @@ return (
 
               {!isRequired && (
                 <button
-                    type="button"
-                    aria-label="Modal bezárása"
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/30 bg-white/10 text-white transition hover:bg-white/20"
-                    onClick={handleClose}
+                  type="button"
+                  aria-label="Modal bezárása"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/30 bg-white/10 text-white transition hover:bg-white/20"
+                  onClick={handleClose}
                 >
-                    <X size={18} strokeWidth={1.8} />
+                  <X size={18} strokeWidth={1.8} />
                 </button>
-                )}
+              )}
             </div>
 
             <label className="relative block">

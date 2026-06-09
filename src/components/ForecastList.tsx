@@ -9,8 +9,9 @@ export function ForecastList({ forecastDays }: ForecastListProps) {
   if (forecastDays.length === 0) {
     return null;
   }
+
   return (
-    <section className="w-full min-w-0 overflow-hidden lg:w-[700px]">
+    <section className="w-full min-w-0 overflow-hidden lg:w-[578px]">
       <p className="mb-7 text-[16px] font-light leading-none tracking-[-0.04em] text-white/85 lg:mb-8">
         7 napos előrejelzés
       </p>

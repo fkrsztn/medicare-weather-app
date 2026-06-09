@@ -16,19 +16,18 @@
 
 html {
   min-height: 100%;
+  background: linear-gradient(180deg, #7cb9e8 0%, #a3d4fa 100%);
+  overscroll-behavior: none;
 }
 
 body {
-  min-height: 100vh;
+  min-height: 100dvh;
   margin: 0;
   font-family: var(--font-inter);
   color: var(--color-white);
-  background: linear-gradient(
-    180deg,
-    var(--background-gradient-start) 0%,
-    var(--background-gradient-end) 100%
-  );
+  background: linear-gradient(180deg, #7cb9e8 0%, #a3d4fa 100%);
   overflow-x: hidden;
+  overscroll-behavior: none;
 }
 
 button,
