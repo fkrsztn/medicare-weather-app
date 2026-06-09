@@ -9,25 +9,25 @@ export function ForecastItem({ forecast }: ForecastItemProps) {
   const WeatherIcon = getWeatherCodeData(forecast.weatherCode).icon;
 
   return (
-    <li className="grid w-full min-w-0 grid-cols-[96px_24px_44px_minmax(0,1fr)] items-center gap-x-2 text-white sm:grid-cols-[130px_36px_84px_1fr] sm:gap-x-5 lg:grid-cols-[150px_220px_1fr] lg:gap-x-6">
+    <li className="grid w-full min-w-0 grid-cols-[72px_112px_minmax(0,1fr)] items-center text-white sm:grid-cols-[120px_140px_minmax(0,1fr)] lg:grid-cols-[150px_220px_minmax(0,1fr)]">
       <span className="min-w-0 truncate text-[17px] font-light capitalize leading-none tracking-[-0.04em] text-white sm:text-[20px] lg:text-[22px]">
         {forecast.dayName}
       </span>
 
-      <span className="contents lg:flex lg:items-center lg:justify-center lg:gap-x-5">
+      <span className="grid w-[90px] grid-cols-[32px_58px] items-center justify-self-center sm:w-[112px] sm:grid-cols-[36px_76px] lg:w-[130px] lg:grid-cols-[40px_90px]">
         <span
           aria-label={forecast.weatherLabel}
           title={forecast.weatherLabel}
-          className="flex items-center justify-center text-white"
+          className="flex h-8 w-8 shrink-0 items-center justify-center justify-self-center text-white sm:h-9 sm:w-9"
         >
           <WeatherIcon
             size={18}
             strokeWidth={1.8}
-            className="sm:size-5 lg:size-6"
+            className="block sm:size-5 lg:size-6"
           />
         </span>
 
-        <span className="block text-right text-[17px] font-light leading-none tracking-[-0.04em] text-white tabular-nums sm:w-[72px] sm:text-[20px] lg:w-auto lg:text-[22px]">
+        <span className="block justify-self-start text-left text-[17px] font-light leading-none tracking-[-0.04em] text-white tabular-nums sm:text-[20px] lg:text-[22px]">
           {forecast.precipitation}%
         </span>
       </span>

@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { CitySearchModal } from "@/components/CitySearchModal";
 import { CurrentWeather } from "@/components/CurrentWeather";
 import { ForecastList } from "@/components/ForecastList";
@@ -13,8 +20,79 @@ import type {
   ForecastDay,
 } from "@/types/weather";
 
+const STORED_CITY_PENDING = "__stored_city_pending__";
+
+function subscribeToStoredCity(onStoreChange: () => void) {
+  if (typeof window === "undefined") {
+    return () => {};
+  }
+
+  window.addEventListener("storage", onStoreChange);
+  window.addEventListener("weather-city-change", onStoreChange);
+
+  return () => {
+    window.removeEventListener("storage", onStoreChange);
+    window.removeEventListener("weather-city-change", onStoreChange);
+  };
+}
+
+function getStoredCityClientSnapshot() {
+  if (typeof window === "undefined") {
+    return STORED_CITY_PENDING;
+  }
+
+  const storedCity = getStoredCity();
+
+  if (!storedCity) {
+    return null;
+  }
+
+  return JSON.stringify(storedCity);
+}
+
+function getStoredCityServerSnapshot() {
+  return STORED_CITY_PENDING;
+}
+
+function useStoredCity() {
+  const storedCitySnapshot = useSyncExternalStore(
+    subscribeToStoredCity,
+    getStoredCityClientSnapshot,
+    getStoredCityServerSnapshot,
+  );
+
+  return useMemo(() => {
+    if (storedCitySnapshot === STORED_CITY_PENDING) {
+      return {
+        isReady: false,
+        city: null,
+      };
+    }
+
+    if (!storedCitySnapshot) {
+      return {
+        isReady: true,
+        city: null,
+      };
+    }
+
+    try {
+      return {
+        isReady: true,
+        city: JSON.parse(storedCitySnapshot) as City,
+      };
+    } catch {
+      return {
+        isReady: true,
+        city: null,
+      };
+    }
+  }, [storedCitySnapshot]);
+}
+
 export function WeatherApp() {
-  const [hasInitialized, setHasInitialized] = useState(false);
+  const { isReady: isStoredCityReady, city: storedCity } = useStoredCity();
+
   const [isCitySearchOpen, setIsCitySearchOpen] = useState(false);
 
   const [currentWeather, setCurrentWeather] =
@@ -31,46 +109,62 @@ export function WeatherApp() {
   const citySearchRequestIdRef = useRef(0);
 
   const hasWeatherData = currentWeather !== null && forecastDays.length > 0;
-  const isCitySelectionRequired = hasInitialized && !currentWeather;
+
+  const shouldLoadStoredCity =
+    isStoredCityReady && storedCity !== null && !hasWeatherData && !weatherError;
+
+  const isAppWeatherLoading = !isStoredCityReady || shouldLoadStoredCity || isWeatherLoading;
+
+  const shouldForceCitySearch =
+    isStoredCityReady &&
+    storedCity === null &&
+    !hasWeatherData &&
+    !isAppWeatherLoading &&
+    !weatherError;
+
+  const isCitySelectionRequired = !hasWeatherData;
+  const isModalOpen = isCitySearchOpen || shouldForceCitySearch;
 
   function openCitySearch() {
     setIsCitySearchOpen(true);
   }
 
-  const loadWeatherForCity = useCallback(async (city: City) => {
-    try {
-      setIsWeatherLoading(true);
-      setWeatherError(null);
-
-      const weatherData = await getWeatherForecast(city);
-
-      setCurrentWeather(weatherData.currentWeather);
-      setForecastDays(weatherData.forecastDays);
-
-      return true;
-    } catch {
-      setCurrentWeather(null);
-      setForecastDays([]);
-      setWeatherError("Nem sikerült lekérni az időjárási adatokat.");
-
-      return false;
-    } finally {
-      setIsWeatherLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    const storedCity = getStoredCity();
-
-    setHasInitialized(true);
-
-    if (!storedCity) {
-      setIsCitySearchOpen(true);
+    if (!shouldLoadStoredCity || !storedCity) {
       return;
     }
 
-    void loadWeatherForCity(storedCity);
-  }, [loadWeatherForCity]);
+    const cityToLoad = storedCity;
+    let isCancelled = false;
+
+    async function loadInitialWeather() {
+      try {
+        const weatherData = await getWeatherForecast(cityToLoad);
+
+        if (isCancelled) {
+          return;
+        }
+
+        setCurrentWeather(weatherData.currentWeather);
+        setForecastDays(weatherData.forecastDays);
+        setWeatherError(null);
+      } catch {
+        if (isCancelled) {
+          return;
+        }
+
+        setCurrentWeather(null);
+        setForecastDays([]);
+        setWeatherError("Nem sikerült lekérni az időjárási adatokat.");
+      }
+    }
+
+    void loadInitialWeather();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [shouldLoadStoredCity, storedCity]);
 
   const handleSearchCity = useCallback(async (query: string) => {
     const normalizedQuery = query.trim();
@@ -113,11 +207,23 @@ export function WeatherApp() {
     setCityResults([]);
     setCitySearchError(null);
     setWeatherError(null);
+    setIsWeatherLoading(true);
 
-    const wasWeatherLoaded = await loadWeatherForCity(city);
+    try {
+      const weatherData = await getWeatherForecast(city);
 
-    if (wasWeatherLoaded) {
+      setCurrentWeather(weatherData.currentWeather);
+      setForecastDays(weatherData.forecastDays);
+
       storeCity(city);
+      window.dispatchEvent(new Event("weather-city-change"));
+    } catch {
+      setCurrentWeather(null);
+      setForecastDays([]);
+      setWeatherError("Nem sikerült lekérni az időjárási adatokat.");
+      setIsCitySearchOpen(true);
+    } finally {
+      setIsWeatherLoading(false);
     }
   }
 
@@ -125,13 +231,7 @@ export function WeatherApp() {
     <>
       <main className="min-h-screen px-[37px] pt-[52px] pb-[10px] text-white sm:px-12 lg:px-8 lg:pt-[96px] lg:pb-[20px]">
         <div className="mx-auto flex min-h-full w-full max-w-[860px] flex-col lg:min-h-[calc(100vh-116px)]">
-          {!hasInitialized ? (
-            <div className="flex flex-1 items-center justify-center">
-              <p className="text-[18px] font-light tracking-[-0.04em] text-white/80">
-                Betöltés...
-              </p>
-            </div>
-          ) : isWeatherLoading && !hasWeatherData ? (
+          {isAppWeatherLoading && !hasWeatherData ? (
             <div className="flex flex-1 items-center justify-center">
               <p className="text-[18px] font-light tracking-[-0.04em] text-white/80">
                 Időjárási adatok betöltése...
@@ -201,23 +301,21 @@ export function WeatherApp() {
           )}
 
           <footer className="mt-auto pb-5 pt-6 text-center text-[16px] font-light tracking-[-0.04em] text-white/80 lg:pb-0 lg:pt-6 lg:text-left">
-            Farkas Krisztián
+            Krisztián
           </footer>
         </div>
       </main>
 
-      {hasInitialized && (
-        <CitySearchModal
-          isOpen={isCitySearchOpen}
-          isRequired={isCitySelectionRequired}
-          cities={cityResults}
-          isLoading={isCitySearchLoading}
-          errorMessage={citySearchError}
-          onClose={() => setIsCitySearchOpen(false)}
-          onSearchCity={handleSearchCity}
-          onSelectCity={handleSelectCity}
-        />
-      )}
+      <CitySearchModal
+        isOpen={isModalOpen}
+        isRequired={isCitySelectionRequired}
+        cities={cityResults}
+        isLoading={isCitySearchLoading}
+        errorMessage={citySearchError}
+        onClose={() => setIsCitySearchOpen(false)}
+        onSearchCity={handleSearchCity}
+        onSelectCity={handleSelectCity}
+      />
     </>
   );
 }

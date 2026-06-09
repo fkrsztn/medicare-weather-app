@@ -50,7 +50,8 @@ Az API-hívások és segédfüggvények a `src/lib` mappában találhatók.
 
 ## Lokális futtatás
 
-A projekt futtatásához először telepíteni kell a függőségeket:
+A projekt futtatásához először telepíteni kell a függőségeket, majd indíthatjuk a fejlesztői szervert:
 
 ```bash
-npm install
+npm install 
+npm run dev
