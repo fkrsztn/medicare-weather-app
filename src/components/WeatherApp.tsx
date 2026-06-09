@@ -301,7 +301,7 @@ export function WeatherApp() {
           )}
 
           <footer className="mt-auto pb-5 pt-6 text-center text-[16px] font-light tracking-[-0.04em] text-white/80 lg:pb-0 lg:pt-6 lg:text-left">
-            Krisztián
+            Farkas Krisztián
           </footer>
         </div>
       </main>
